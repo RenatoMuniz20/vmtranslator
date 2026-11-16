@@ -1,0 +1,99 @@
+package vmtranslator.codewriter;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+/**
+ * Traduz comandos VM para Assembly Hack e os grava no arquivo .asm.
+ */
+public class CodeWriter implements AutoCloseable {
+
+    /** Maior valor que cabe numa instrução A (15 bits). */
+    private static final int MAX_CONSTANT = 32767;
+
+    private final BufferedWriter out;
+    private String fileName = "";
+
+    /** Abre (ou recria) o arquivo .asm de saída. */
+    public CodeWriter(Path output) throws IOException {
+        this.out = Files.newBufferedWriter(output);
+    }
+
+    /** Informa o nome do .vm sendo traduzido (usado pelos símbolos static). */
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+    /** add, sub, neg, eq, gt, lt, and, or, not. */
+    public void writeArithmetic(String command) throws IOException {
+        comment(command);
+        switch (command) {
+            case "add" -> binary("D+M");
+            default -> throw new IllegalArgumentException(
+                    "comando aritmético ainda não suportado: " + command);
+        }
+    }
+
+    /** Empilha o valor de segment[index]. */
+    public void writePush(String segment, int index) throws IOException {
+        comment("push " + segment + " " + index);
+        switch (segment) {
+            case "constant" -> {
+                if (index > MAX_CONSTANT) {
+                    throw new IllegalArgumentException(
+                            "constante maior que " + MAX_CONSTANT + ": " + index);
+                }
+                emit("@" + index, "D=A");          // D = index
+            }
+            default -> throw new IllegalArgumentException(
+                    "segmento ainda não suportado em push: " + segment);
+        }
+        pushD();
+    }
+
+    /** Desempilha o topo da pilha para segment[index]. */
+    public void writePop(String segment, int index) throws IOException {
+        comment("pop " + segment + " " + index);
+        throw new IllegalArgumentException("segmento ainda não suportado em pop: " + segment);
+    }
+
+    /** Escreve um laço infinito no fim do programa e fecha o arquivo. */
+    @Override
+    public void close() throws IOException {
+        comment("fim do programa: laço infinito");
+        emit("(END_OF_PROGRAM)", "@END_OF_PROGRAM", "0;JMP");
+        out.close();
+    }
+
+    // ------------------------------------------------------------ blocos de código
+
+    /** *SP = D; SP++ */
+    private void pushD() throws IOException {
+        emit("@SP", "A=M", "M=D", "@SP", "M=M+1");
+    }
+
+    /**
+     * Operação binária: desempilha y, e troca x (o novo topo) por "x op y".
+     * Em Assembly: D = y, M = x, e o resultado é gravado no lugar de x.
+     */
+    private void binary(String operation) throws IOException {
+        emit("@SP", "AM=M-1",   // SP--, A aponta para y
+                "D=M",             // D = y
+                "A=A-1",           // A aponta para x
+                "M=" + operation); // x = x op y
+    }
+
+    // ------------------------------------------------------------ escrita
+
+    private void comment(String text) throws IOException {
+        out.write("// " + text + "\n");
+    }
+
+    private void emit(String... lines) throws IOException {
+        for (String line : lines) {
+            out.write(line + "\n");
+        }
+    }
+}
