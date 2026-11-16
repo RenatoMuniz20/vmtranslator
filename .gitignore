@@ -1,0 +1,16 @@
+# Build do Maven
+target/
+
+# Classes compiladas
+*.class
+
+# Saídas geradas pelo tradutor e pelos emuladores
+projects/**/*.asm
+projects/**/*.out
+
+# IDEs e sistema operacional
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
