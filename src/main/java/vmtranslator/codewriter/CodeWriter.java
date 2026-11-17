@@ -30,7 +30,12 @@ public class CodeWriter implements AutoCloseable {
     public void writeArithmetic(String command) throws IOException {
         comment(command);
         switch (command) {
-            case "add" -> binary("D+M");
+            case "add" -> binary("D+M");   // x + y
+            case "sub" -> binary("M-D");   // x - y  (M = x, D = y)
+            case "and" -> binary("D&M");   // x & y
+            case "or"  -> binary("D|M");   // x | y
+            case "neg" -> unary("-M");     // -y
+            case "not" -> unary("!M");     // !y
             default -> throw new IllegalArgumentException(
                     "comando aritmético ainda não suportado: " + command);
         }
@@ -83,6 +88,12 @@ public class CodeWriter implements AutoCloseable {
                 "D=M",             // D = y
                 "A=A-1",           // A aponta para x
                 "M=" + operation); // x = x op y
+    }
+
+    /** Operação unária: troca o topo da pilha por "op topo", sem mexer no SP. */
+    private void unary(String operation) throws IOException {
+        emit("@SP", "A=M-1",    // A aponta para o topo (y)
+                "M=" + operation); // y = op y
     }
 
     // ------------------------------------------------------------ escrita
