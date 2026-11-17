@@ -16,6 +16,9 @@ public class CodeWriter implements AutoCloseable {
     private final BufferedWriter out;
     private String fileName = "";
 
+    /** Contador que torna únicos os rótulos gerados pelas comparações. */
+    private int labelCounter = 0;
+
     /** Abre (ou recria) o arquivo .asm de saída. */
     public CodeWriter(Path output) throws IOException {
         this.out = Files.newBufferedWriter(output);
@@ -36,8 +39,11 @@ public class CodeWriter implements AutoCloseable {
             case "or"  -> binary("D|M");   // x | y
             case "neg" -> unary("-M");     // -y
             case "not" -> unary("!M");     // !y
+            case "eq"  -> compare("JEQ");  // x == y
+            case "gt"  -> compare("JGT");  // x >  y
+            case "lt"  -> compare("JLT");  // x <  y
             default -> throw new IllegalArgumentException(
-                    "comando aritmético ainda não suportado: " + command);
+                    "comando aritmético desconhecido: " + command);
         }
     }
 
@@ -94,6 +100,24 @@ public class CodeWriter implements AutoCloseable {
     private void unary(String operation) throws IOException {
         emit("@SP", "A=M-1",    // A aponta para o topo (y)
                 "M=" + operation); // y = op y
+    }
+
+    /**
+     * Comparação: desempilha y, e troca x por -1 (verdadeiro) ou 0 (falso).
+     * Calcula D = x - y e usa o salto condicional (JEQ, JGT ou JLT) sobre D.
+     */
+    private void compare(String jump) throws IOException {
+        String trueLabel = "TRUE_" + jump.substring(1) + "_" + labelCounter++;  // ex.: TRUE_EQ_0
+        emit("@SP", "AM=M-1",   // SP--, A aponta para y
+                "D=M",             // D = y
+                "A=A-1",           // A aponta para x
+                "D=M-D",           // D = x - y
+                "M=-1",            // supõe verdadeiro: x = -1
+                "@" + trueLabel,
+                "D;" + jump,       // se a condição vale, mantém -1 e pula
+                "@SP", "A=M-1",    // senão, volta a apontar para o topo
+                "M=0",             // e grava 0 (falso)
+                "(" + trueLabel + ")");
     }
 
     // ------------------------------------------------------------ escrita
