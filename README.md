@@ -47,8 +47,19 @@ java -jar target/vmtranslator.jar caminho/Xxx.vm
 java -jar target/vmtranslator.jar caminho/Xxx
 ```
 
-Em caso de erro no `.vm`, o tradutor informa a linha e o comando, por exemplo
-`Erro: Linha 12: comando desconhecido -> "mul"`, e não gera o `.asm`.
+Exemplos com os testes do repositório:
+
+```bash
+java -jar target/vmtranslator.jar projects/7/StackArithmetic/SimpleAdd/SimpleAdd.vm
+java -jar target/vmtranslator.jar projects/8/FunctionCalls/FibonacciElement
+```
+
+Ao traduzir um diretório, todos os `.vm` são traduzidos em ordem alfabética para um único `.asm`.
+O código de bootstrap (`SP = 256` e `call Sys.init 0`) é gerado **somente** quando o diretório
+contém `Sys.vm`.
+
+Em caso de erro no `.vm`, o tradutor informa o arquivo, a linha e o comando, por exemplo
+`Erro: Main.vm, Linha 12: comando desconhecido -> "mul"`, e não gera o `.asm`.
 
 ## Estrutura do código
 
@@ -56,7 +67,7 @@ Em caso de erro no `.vm`, o tradutor informa a linha e o comando, por exemplo
 |---|---|
 | `vmtranslator.parser` | `Parser`: lê o `.vm`, remove comentários e espaços e decompõe cada comando (`commandType`, `arg1`, `arg2`). `CommandType`: enum dos tipos de comando. `VMSyntaxException`: erro com número da linha. |
 | `vmtranslator.codewriter` | `CodeWriter`: gera o Assembly Hack de cada comando. |
-| `vmtranslator.main` | `Main`: valida a entrada e liga o `Parser` ao `CodeWriter`. |
+| `vmtranslator.main` | `Main`: valida a entrada (arquivo ou diretório), decide se gera o bootstrap e liga o `Parser` ao `CodeWriter`. |
 
 ## Funcionalidades implementadas
 
@@ -68,7 +79,17 @@ Em caso de erro no `.vm`, o tradutor informa a linha e o comando, por exemplo
 - Cada comando VM é escrito como comentário no `.asm` (ex.: `// push constant 17`)
 - Mensagens de erro com o número da linha do `.vm`
 
-**Parte 2 (Project 08)**: em desenvolvimento.
+**Parte 2 (Project 08)**
+
+- Controle de fluxo: `label`, `goto`, `if-goto`. Os rótulos recebem o nome da função corrente
+  (`função$rótulo`), então duas funções podem ter, cada uma, o seu `label LOOP`
+- `function f nVars`: declara `(f)` e inicializa as `nVars` variáveis locais com `0`
+- `call f nArgs`: empilha o endereço de retorno e `LCL`, `ARG`, `THIS`, `THAT`; faz `ARG = SP - 5 - nArgs`
+  e `LCL = SP`; cada chamada tem o seu rótulo de retorno único (`chamador$ret.i`)
+- `return`: guarda `endFrame` em `R13` e o endereço de retorno em `R14` **antes** de gravar o valor
+  de retorno em `*ARG` (necessário para funções com 0 argumentos), restaura o frame do chamador e salta
+- Bootstrap (`writeInit`): `SP = 256` e `call Sys.init 0`, gerado só para diretórios com `Sys.vm`
+- Tradução de diretórios, com os símbolos `static` separados por arquivo (`Class1.0`, `Class2.0`)
 
 ## Testes
 
@@ -102,12 +123,12 @@ NAND2TETRIS_TOOLS=~/nand2tetris/tools scripts/run-tests.sh
 | MemoryAccess/BasicTest | 07 | ✅ passou |
 | MemoryAccess/PointerTest | 07 | ✅ passou |
 | MemoryAccess/StaticTest | 07 | ✅ passou |
-| ProgramFlow/BasicLoop | 08 | ⏳ pendente |
-| ProgramFlow/FibonacciSeries | 08 | ⏳ pendente |
-| FunctionCalls/SimpleFunction | 08 | ⏳ pendente |
-| FunctionCalls/NestedCall | 08 | ⏳ pendente |
-| FunctionCalls/FibonacciElement | 08 | ⏳ pendente |
-| FunctionCalls/StaticsTest | 08 | ⏳ pendente |
+| ProgramFlow/BasicLoop | 08 | ✅ passou |
+| ProgramFlow/FibonacciSeries | 08 | ✅ passou |
+| FunctionCalls/SimpleFunction | 08 | ✅ passou |
+| FunctionCalls/NestedCall | 08 | ✅ passou |
+| FunctionCalls/FibonacciElement | 08 | ✅ passou |
+| FunctionCalls/StaticsTest | 08 | ✅ passou |
 
 ---
 
