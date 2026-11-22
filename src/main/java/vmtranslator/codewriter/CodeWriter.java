@@ -20,6 +20,9 @@ public class CodeWriter implements AutoCloseable {
     private final BufferedWriter out;
     private String fileName = "";
 
+    /** Função sendo traduzida; prefixa os rótulos (função$rótulo). */
+    private String currentFunction = "";
+
     /** Contador que torna únicos os rótulos gerados pelas comparações. */
     private int labelCounter = 0;
 
@@ -31,6 +34,7 @@ public class CodeWriter implements AutoCloseable {
     /** Informa o nome do .vm sendo traduzido (usado pelos símbolos static). */
     public void setFileName(String fileName) {
         this.fileName = fileName;
+        this.currentFunction = "";
     }
 
     /** add, sub, neg, eq, gt, lt, and, or, not. */
@@ -95,6 +99,25 @@ public class CodeWriter implements AutoCloseable {
         }
     }
 
+    /** label: declara o rótulo função$label. */
+    public void writeLabel(String label) throws IOException {
+        comment("label " + label);
+        emit("(" + scopedLabel(label) + ")");
+    }
+
+    /** goto: salto incondicional. */
+    public void writeGoto(String label) throws IOException {
+        comment("goto " + label);
+        emit("@" + scopedLabel(label), "0;JMP");
+    }
+
+    /** if-goto: desempilha a condição e salta se ela for diferente de 0. */
+    public void writeIf(String label) throws IOException {
+        comment("if-goto " + label);
+        popD();                                   // D = condição
+        emit("@" + scopedLabel(label), "D;JNE");  // salta se D != 0
+    }
+
     /** Escreve um laço infinito no fim do programa e fecha o arquivo. */
     @Override
     public void close() throws IOException {
@@ -104,6 +127,19 @@ public class CodeWriter implements AutoCloseable {
     }
 
     // ------------------------------------------------------------ blocos de código
+
+    /**
+     * Prefixo dos rótulos: o nome da função corrente. Fora de qualquer função
+     * (BasicLoop, FibonacciSeries), usa o nome do arquivo .vm.
+     */
+    private String scope() {
+        return currentFunction.isEmpty() ? fileName : currentFunction;
+    }
+
+    /** Rótulo VM com o escopo da função: label LOOP em Foo.bar vira Foo.bar$LOOP. */
+    private String scopedLabel(String label) {
+        return scope() + "$" + label;
+    }
 
     /** Símbolo do ponteiro-base de local, argument, this e that. */
     private static String basePointer(String segment) {

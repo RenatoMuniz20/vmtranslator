@@ -58,6 +58,9 @@ public class Main {
                     case C_ARITHMETIC -> writer.writeArithmetic(parser.arg1());
                     case C_PUSH -> writer.writePush(parser.arg1(), parser.arg2());
                     case C_POP -> writer.writePop(parser.arg1(), parser.arg2());
+                    case C_LABEL -> writer.writeLabel(parser.arg1());
+                    case C_GOTO -> writer.writeGoto(parser.arg1());
+                    case C_IF -> writer.writeIf(parser.arg1());
                     default -> throw new IllegalArgumentException(
                             "tipo de comando não suportado: " + parser.commandType());
                 }
