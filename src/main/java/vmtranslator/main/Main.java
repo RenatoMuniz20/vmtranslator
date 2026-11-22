@@ -37,6 +37,7 @@ public class Main {
     static Path translate(Path input) throws IOException {
         List<Path> vmFiles;
         Path output;
+        boolean bootstrap = false;
         if (Files.isDirectory(input)) {
             Path dir = input.toAbsolutePath().normalize();
             vmFiles = listVmFiles(dir);
@@ -44,6 +45,8 @@ public class Main {
                 throw new IllegalArgumentException("o diretório não contém arquivos .vm: " + input);
             }
             output = dir.resolve(dir.getFileName() + ".asm");        // Xxx/Xxx.asm
+            // o bootstrap só é gerado para um diretório que contém Sys.vm
+            bootstrap = vmFiles.stream().anyMatch(f -> f.getFileName().toString().equals("Sys.vm"));
         } else if (Files.isRegularFile(input) && isVmFile(input)) {
             vmFiles = List.of(input);
             output = input.resolveSibling(baseName(input) + ".asm"); // Xxx.vm → Xxx.asm
@@ -53,6 +56,9 @@ public class Main {
         }
 
         try (CodeWriter writer = new CodeWriter(output)) {
+            if (bootstrap) {
+                writer.writeInit();
+            }
             for (Path vmFile : vmFiles) {
                 writer.setFileName(baseName(vmFile));                // prefixo dos símbolos static
                 try {

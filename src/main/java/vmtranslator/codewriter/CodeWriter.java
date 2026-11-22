@@ -40,6 +40,17 @@ public class CodeWriter implements AutoCloseable {
         this.currentFunction = "";
     }
 
+    /**
+     * Bootstrap: SP = 256 e call Sys.init 0. Deve ser a primeira coisa no .asm.
+     * É um call completo (e não um simples goto), por isso deixa SP = 261, LCL = 261 e ARG = 256.
+     */
+    public void writeInit() throws IOException {
+        comment("bootstrap: SP = 256; call Sys.init 0");
+        emit("@256", "D=A", "@SP", "M=D");
+        currentFunction = "Bootstrap";     // rótulo de retorno: Bootstrap$ret.0
+        writeCall("Sys.init", 0);
+    }
+
     /** add, sub, neg, eq, gt, lt, and, or, not. */
     public void writeArithmetic(String command) throws IOException {
         comment(command);
