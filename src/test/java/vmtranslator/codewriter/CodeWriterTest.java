@@ -89,4 +89,67 @@ class CodeWriterTest {
             assertThrows(IllegalArgumentException.class, () -> cw.writeArithmetic("mul"));
         }
     }
+
+    @Test
+    void rotulosUsamOEscopoDaFuncao() throws IOException {
+        Path asm = dir.resolve("Teste.asm");
+        try (CodeWriter cw = new CodeWriter(asm)) {
+            cw.setFileName("Foo");
+            cw.writeLabel("INICIO");               // fora de função: prefixo = arquivo
+            cw.writeFunction("Foo.bar", 0);
+            cw.writeLabel("LOOP");
+            cw.writeGoto("LOOP");
+            cw.writeIf("LOOP");
+        }
+        List<String> out = lines(asm);
+        assertTrue(out.contains("(Foo$INICIO)"));
+        assertTrue(out.contains("(Foo.bar$LOOP)"));
+        assertEquals(2, out.stream().filter(l -> l.equals("@Foo.bar$LOOP")).count());
+    }
+
+    @Test
+    void functionZeraAsVariaveisLocais() throws IOException {
+        Path asm = dir.resolve("Teste.asm");
+        try (CodeWriter cw = new CodeWriter(asm)) {
+            cw.writeFunction("Foo.semLocais", 0);
+            cw.writeFunction("Foo.tresLocais", 3);
+        }
+        List<String> out = lines(asm);
+        assertTrue(out.contains("(Foo.semLocais)"));
+        assertEquals(3, out.stream().filter(l -> l.equals("M=0")).count());   // uma por local
+    }
+
+    @Test
+    void cadaCallTemSeuRotuloDeRetorno() throws IOException {
+        Path asm = dir.resolve("Teste.asm");
+        try (CodeWriter cw = new CodeWriter(asm)) {
+            cw.setFileName("Main");
+            cw.writeFunction("Main.main", 0);
+            cw.writeCall("Main.fibonacci", 1);
+            cw.writeCall("Main.fibonacci", 1);
+        }
+        List<String> labels = lines(asm).stream().filter(l -> l.contains("$ret.") && l.startsWith("(")).toList();
+        assertEquals(List.of("(Main.main$ret.0)", "(Main.main$ret.1)"), labels);
+    }
+
+    @Test
+    void callReposicionaArgDeAcordoComNArgs() throws IOException {
+        Path asm = dir.resolve("Teste.asm");
+        try (CodeWriter cw = new CodeWriter(asm)) {
+            cw.writeCall("Foo.bar", 2);
+        }
+        assertTrue(lines(asm).contains("@7"));   // ARG = SP - 5 - 2
+    }
+
+    @Test
+    void bootstrapIniciaSpEChamaSysInit() throws IOException {
+        Path asm = dir.resolve("Teste.asm");
+        try (CodeWriter cw = new CodeWriter(asm)) {
+            cw.writeInit();
+        }
+        List<String> out = lines(asm);
+        assertEquals("@256", out.get(1));
+        assertTrue(out.contains("@Sys.init"));
+        assertTrue(out.contains("(Bootstrap$ret.0)"));
+    }
 }
