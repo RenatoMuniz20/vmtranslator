@@ -98,6 +98,7 @@ public class Main {
                     case C_GOTO -> writer.writeGoto(parser.arg1());
                     case C_IF -> writer.writeIf(parser.arg1());
                     case C_FUNCTION -> writer.writeFunction(parser.arg1(), parser.arg2());
+                    case C_CALL -> writer.writeCall(parser.arg1(), parser.arg2());
                     case C_RETURN -> writer.writeReturn();
                     default -> throw new IllegalArgumentException(
                             "tipo de comando não suportado: " + parser.commandType());

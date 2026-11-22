@@ -26,6 +26,9 @@ public class CodeWriter implements AutoCloseable {
     /** Contador que torna únicos os rótulos gerados pelas comparações. */
     private int labelCounter = 0;
 
+    /** Contador que torna único o rótulo de retorno de cada call. */
+    private int returnCounter = 0;
+
     /** Abre (ou recria) o arquivo .asm de saída. */
     public CodeWriter(Path output) throws IOException {
         this.out = Files.newBufferedWriter(output);
@@ -130,6 +133,26 @@ public class CodeWriter implements AutoCloseable {
             emit("@SP", "AM=M+1",   // SP++
                  "A=A-1", "M=0");   // *(SP - 1) = 0  (local i = 0)
         }
+    }
+
+    /**
+     * call f nArgs: salva o frame do chamador, reposiciona ARG e LCL e salta para f.
+     * O rótulo de retorno é único: chamador$ret.i (ex.: Main.main$ret.0).
+     */
+    public void writeCall(String functionName, int nArgs) throws IOException {
+        comment("call " + functionName + " " + nArgs);
+        String returnLabel = scope() + "$ret." + returnCounter++;
+        emit("@" + returnLabel, "D=A");          // push retAddr
+        pushD();
+        for (String pointer : new String[] {"LCL", "ARG", "THIS", "THAT"}) {
+            emit("@" + pointer, "D=M");          // push LCL, ARG, THIS, THAT
+            pushD();
+        }
+        emit("@SP", "D=M", "@" + (5 + nArgs), "D=D-A",
+             "@ARG", "M=D",                      // ARG = SP - 5 - nArgs
+             "@SP", "D=M", "@LCL", "M=D",        // LCL = SP
+             "@" + functionName, "0;JMP",        // goto f
+             "(" + returnLabel + ")");           // a execução volta para cá
     }
 
     /**
