@@ -58,6 +58,8 @@ public class Main {
                     case C_ARITHMETIC -> writer.writeArithmetic(parser.arg1());
                     case C_PUSH -> writer.writePush(parser.arg1(), parser.arg2());
                     case C_POP -> writer.writePop(parser.arg1(), parser.arg2());
+                    default -> throw new IllegalArgumentException(
+                            "tipo de comando não suportado: " + parser.commandType());
                 }
             } catch (IllegalArgumentException e) {
                 // acrescenta a linha do .vm à mensagem de erro do CodeWriter

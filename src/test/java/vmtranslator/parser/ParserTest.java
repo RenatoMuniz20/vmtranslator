@@ -80,6 +80,52 @@ class ParserTest {
     }
 
     @Test
+    void decompoeControleDeFluxo() {
+        Parser p = new Parser(List.of("label LOOP", "goto END", "if-goto COMPUTE_ELEMENT"));
+
+        p.advance();
+        assertEquals(CommandType.C_LABEL, p.commandType());
+        assertEquals("LOOP", p.arg1());
+
+        p.advance();
+        assertEquals(CommandType.C_GOTO, p.commandType());
+        assertEquals("END", p.arg1());
+
+        p.advance();
+        assertEquals(CommandType.C_IF, p.commandType());
+        assertEquals("COMPUTE_ELEMENT", p.arg1());
+    }
+
+    @Test
+    void decompoeFunctionCallEReturn() {
+        Parser p = new Parser(List.of("function Main.fibonacci 2", "call Main.fibonacci 1", "return"));
+
+        p.advance();
+        assertEquals(CommandType.C_FUNCTION, p.commandType());
+        assertEquals("Main.fibonacci", p.arg1());
+        assertEquals(2, p.arg2());
+
+        p.advance();
+        assertEquals(CommandType.C_CALL, p.commandType());
+        assertEquals("Main.fibonacci", p.arg1());
+        assertEquals(1, p.arg2());
+
+        p.advance();
+        assertEquals(CommandType.C_RETURN, p.commandType());
+        assertThrows(IllegalStateException.class, p::arg1);
+    }
+
+    @Test
+    void erroDeSintaxeNosComandosNovos() {
+        assertThrows(VMSyntaxException.class, () -> new Parser(List.of("label")));
+        assertThrows(VMSyntaxException.class, () -> new Parser(List.of("goto A B")));
+        assertThrows(VMSyntaxException.class, () -> new Parser(List.of("label 1LOOP")));
+        assertThrows(VMSyntaxException.class, () -> new Parser(List.of("function Foo.bar")));
+        assertThrows(VMSyntaxException.class, () -> new Parser(List.of("call Foo.bar x")));
+        assertThrows(VMSyntaxException.class, () -> new Parser(List.of("return 0")));
+    }
+
+    @Test
     void leArquivoRealSimpleAdd() throws IOException {
         Parser p = new Parser(Path.of("projects/7/StackArithmetic/SimpleAdd/SimpleAdd.vm"));
         int count = 0;
