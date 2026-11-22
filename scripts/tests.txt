@@ -1,0 +1,10 @@
+# Testes executados por run-tests.ps1 (Windows) e run-tests.sh (Linux/Mac).
+# Uma entrada por linha: um arquivo .vm ou um diretorio com arquivos .vm.
+# O .tst usado e o de mesmo nome, na mesma pasta.
+
+# Project 07 (Parte 1)
+projects/7/StackArithmetic/SimpleAdd/SimpleAdd.vm
+projects/7/StackArithmetic/StackTest/StackTest.vm
+projects/7/MemoryAccess/BasicTest/BasicTest.vm
+projects/7/MemoryAccess/PointerTest/PointerTest.vm
+projects/7/MemoryAccess/StaticTest/StaticTest.vm
