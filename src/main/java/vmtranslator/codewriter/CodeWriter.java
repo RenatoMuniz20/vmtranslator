@@ -118,6 +118,38 @@ public class CodeWriter implements AutoCloseable {
         emit("@" + scopedLabel(label), "D;JNE");  // salta se D != 0
     }
 
+    /**
+     * function f nVars: declara o rótulo (f) e aloca nVars variáveis locais,
+     * empilhando 0 para cada uma.
+     */
+    public void writeFunction(String functionName, int nVars) throws IOException {
+        comment("function " + functionName + " " + nVars);
+        currentFunction = functionName;
+        emit("(" + functionName + ")");
+        for (int i = 0; i < nVars; i++) {
+            emit("@SP", "AM=M+1",   // SP++
+                 "A=A-1", "M=0");   // *(SP - 1) = 0  (local i = 0)
+        }
+    }
+
+    /**
+     * return: devolve o valor ao chamador e restaura o frame dele.
+     * R13 = endFrame (LCL da função que retorna); R14 = endereço de retorno.
+     */
+    public void writeReturn() throws IOException {
+        comment("return");
+        emit("@LCL", "D=M", "@R13", "M=D",          // endFrame = LCL
+             "@5", "A=D-A", "D=M", "@R14", "M=D");  // retAddr = *(endFrame - 5), lido ANTES de *ARG
+        popD();
+        emit("@ARG", "A=M", "M=D",                  // *ARG = valor de retorno
+             "@ARG", "D=M+1", "@SP", "M=D");        // SP = ARG + 1
+        for (String pointer : new String[] {"THAT", "THIS", "ARG", "LCL"}) {
+            emit("@R13", "AM=M-1", "D=M",           // endFrame-1, -2, -3, -4
+                 "@" + pointer, "M=D");             // restaura o ponteiro do chamador
+        }
+        emit("@R14", "A=M", "0;JMP");               // goto retAddr
+    }
+
     /** Escreve um laço infinito no fim do programa e fecha o arquivo. */
     @Override
     public void close() throws IOException {
