@@ -3,12 +3,16 @@ package vmtranslator.main;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Stream;
 import vmtranslator.codewriter.CodeWriter;
 import vmtranslator.parser.Parser;
 import vmtranslator.parser.VMSyntaxException;
 
 /**
- * Ponto de entrada: java -jar vmtranslator.jar caminho/Xxx.vm
+ * Ponto de entrada:
+ *   java -jar vmtranslator.jar caminho/Xxx.vm   → caminho/Xxx.asm
+ *   java -jar vmtranslator.jar caminho/Xxx      → caminho/Xxx/Xxx.asm (todos os .vm do diretório)
  */
 public class Main {
 
@@ -29,24 +33,56 @@ public class Main {
         }
     }
 
-    /** Traduz um arquivo .vm e devolve o caminho do .asm gerado. */
+    /** Traduz um arquivo .vm ou um diretório e devolve o caminho do .asm gerado. */
     static Path translate(Path input) throws IOException {
-        String fileName = input.getFileName().toString();
-        if (!fileName.endsWith(".vm") || !Files.isRegularFile(input)) {
-            throw new IllegalArgumentException("a entrada precisa ser um arquivo .vm existente: " + input);
+        List<Path> vmFiles;
+        Path output;
+        if (Files.isDirectory(input)) {
+            Path dir = input.toAbsolutePath().normalize();
+            vmFiles = listVmFiles(dir);
+            if (vmFiles.isEmpty()) {
+                throw new IllegalArgumentException("o diretório não contém arquivos .vm: " + input);
+            }
+            output = dir.resolve(dir.getFileName() + ".asm");        // Xxx/Xxx.asm
+        } else if (Files.isRegularFile(input) && isVmFile(input)) {
+            vmFiles = List.of(input);
+            output = input.resolveSibling(baseName(input) + ".asm"); // Xxx.vm → Xxx.asm
+        } else {
+            throw new IllegalArgumentException(
+                    "a entrada precisa ser um arquivo .vm ou um diretório existente: " + input);
         }
 
-        String baseName = fileName.substring(0, fileName.length() - ".vm".length());
-        Path output = input.resolveSibling(baseName + ".asm");
-
         try (CodeWriter writer = new CodeWriter(output)) {
-            writer.setFileName(baseName);
-            translateFile(new Parser(input), writer);
+            for (Path vmFile : vmFiles) {
+                writer.setFileName(baseName(vmFile));                // prefixo dos símbolos static
+                try {
+                    translateFile(new Parser(vmFile), writer);
+                } catch (VMSyntaxException e) {
+                    throw new VMSyntaxException(vmFile.getFileName().toString(), e);
+                }
+            }
         } catch (IOException | RuntimeException e) {
             Files.deleteIfExists(output);   // não deixa um .asm pela metade
             throw e;
         }
         return output;
+    }
+
+    /** Arquivos .vm do diretório, em ordem alfabética (resultado previsível). */
+    private static List<Path> listVmFiles(Path dir) throws IOException {
+        try (Stream<Path> files = Files.list(dir)) {
+            return files.filter(Files::isRegularFile).filter(Main::isVmFile).sorted().toList();
+        }
+    }
+
+    private static boolean isVmFile(Path file) {
+        return file.getFileName().toString().endsWith(".vm");
+    }
+
+    /** Nome do arquivo sem a extensão .vm. */
+    private static String baseName(Path vmFile) {
+        String name = vmFile.getFileName().toString();
+        return name.substring(0, name.length() - ".vm".length());
     }
 
     /** Lê cada comando do Parser e despacha para o método certo do CodeWriter. */

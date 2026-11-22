@@ -11,4 +11,9 @@ public class VMSyntaxException extends RuntimeException {
     public VMSyntaxException(int lineNumber, String line, String message) {
         super("Linha " + lineNumber + ": " + message + " -> \"" + line + "\"");
     }
+
+    /** Acrescenta o nome do arquivo .vm à mensagem (útil ao traduzir um diretório). */
+    public VMSyntaxException(String fileName, VMSyntaxException cause) {
+        super(fileName + ", " + cause.getMessage(), cause);
+    }
 }
