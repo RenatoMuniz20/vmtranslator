@@ -66,7 +66,7 @@ public class CodeWriter implements AutoCloseable {
                     "@" + index, "D=A",                  // D = index
                     "@" + basePointer(segment), "A=D+M", // A = base + index
                     "D=M");                              // D = RAM[base + index]
-            case "temp", "pointer" -> emit("@" + fixedAddress(segment, index), "D=M");
+            case "temp", "pointer", "static" -> emit("@" + fixedAddress(segment, index), "D=M");
             default -> throw new IllegalArgumentException(
                     "segmento desconhecido em push: " + segment);
         }
@@ -84,7 +84,7 @@ public class CodeWriter implements AutoCloseable {
                 popD();                                   // D = valor desempilhado
                 emit("@R13", "A=M", "M=D");               // RAM[R13] = D
             }
-            case "temp", "pointer" -> {
+            case "temp", "pointer", "static" -> {
                 popD();
                 emit("@" + fixedAddress(segment, index), "M=D");
             }
@@ -116,7 +116,7 @@ public class CodeWriter implements AutoCloseable {
         };
     }
 
-    /** Endereço fixo (conhecido em tempo de tradução) de temp i e pointer i. */
+    /** Endereço fixo (conhecido em tempo de tradução) de temp i, pointer i e static i. */
     private String fixedAddress(String segment, int index) {
         switch (segment) {
             case "temp" -> {
@@ -126,6 +126,12 @@ public class CodeWriter implements AutoCloseable {
             case "pointer" -> {
                 checkRange(segment, index, 2);
                 return index == 0 ? "THIS" : "THAT";         // RAM[3] ou RAM[4]
+            }
+            case "static" -> {
+                if (fileName.isEmpty()) {
+                    throw new IllegalStateException("setFileName() precisa ser chamado antes de usar static");
+                }
+                return fileName + "." + index;               // ex.: Foo.3 (o Assembler aloca a partir de RAM[16])
             }
             default -> throw new IllegalArgumentException("segmento sem endereço fixo: " + segment);
         }
