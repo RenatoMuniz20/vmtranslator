@@ -66,7 +66,7 @@ public class CodeWriter implements AutoCloseable {
                     "@" + index, "D=A",                  // D = index
                     "@" + basePointer(segment), "A=D+M", // A = base + index
                     "D=M");                              // D = RAM[base + index]
-            case "temp" -> emit("@" + fixedAddress(segment, index), "D=M");
+            case "temp", "pointer" -> emit("@" + fixedAddress(segment, index), "D=M");
             default -> throw new IllegalArgumentException(
                     "segmento desconhecido em push: " + segment);
         }
@@ -84,7 +84,7 @@ public class CodeWriter implements AutoCloseable {
                 popD();                                   // D = valor desempilhado
                 emit("@R13", "A=M", "M=D");               // RAM[R13] = D
             }
-            case "temp" -> {
+            case "temp", "pointer" -> {
                 popD();
                 emit("@" + fixedAddress(segment, index), "M=D");
             }
@@ -116,12 +116,16 @@ public class CodeWriter implements AutoCloseable {
         };
     }
 
-    /** Endereço fixo (conhecido em tempo de tradução) de temp i. */
+    /** Endereço fixo (conhecido em tempo de tradução) de temp i e pointer i. */
     private String fixedAddress(String segment, int index) {
         switch (segment) {
             case "temp" -> {
                 checkRange(segment, index, TEMP_SIZE);
                 return String.valueOf(TEMP_BASE + index);   // RAM[5 + i]
+            }
+            case "pointer" -> {
+                checkRange(segment, index, 2);
+                return index == 0 ? "THIS" : "THAT";         // RAM[3] ou RAM[4]
             }
             default -> throw new IllegalArgumentException("segmento sem endereço fixo: " + segment);
         }
