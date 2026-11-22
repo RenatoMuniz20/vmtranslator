@@ -8,3 +8,11 @@ projects/7/StackArithmetic/StackTest/StackTest.vm
 projects/7/MemoryAccess/BasicTest/BasicTest.vm
 projects/7/MemoryAccess/PointerTest/PointerTest.vm
 projects/7/MemoryAccess/StaticTest/StaticTest.vm
+
+# Project 08 (Parte 2)
+projects/8/ProgramFlow/BasicLoop/BasicLoop.vm
+projects/8/ProgramFlow/FibonacciSeries/FibonacciSeries.vm
+projects/8/FunctionCalls/SimpleFunction/SimpleFunction.vm
+projects/8/FunctionCalls/NestedCall
+projects/8/FunctionCalls/FibonacciElement
+projects/8/FunctionCalls/StaticsTest
